@@ -1,19 +1,13 @@
-# Digital Signage Player Case (Tizen-First)
+# Digital Signage Player (Tizen-First)
 
-Production-oriented Smart TV player case implementation for:
-- remote playlist playback
-- offline-first behavior
-- MQTT command/result control channel
-- Tizen packaging flow (`.wgt`)
+Operational README for local run, MQTT validation, and Tizen package flow.
 
 ## 1) Scope
-This repository delivers:
-- Tizen-first architecture with platform adapter boundary
-- command pipeline with validation + idempotency
-- reconnect/backoff MQTT behavior
-- screenshot command with real-or-mock fallback
-- local dev stack via Docker (Mosquitto + mock playlist API)
-- unit tests for critical logic
+This repository provides:
+- local playback runtime
+- MQTT command/event channel
+- offline cache behavior
+- Tizen packaging and emulator run flow
 
 WebOS is intentionally left as adapter-readiness, not full delivery scope.
 
@@ -38,15 +32,41 @@ Detailed documents:
 ## 3) Requirements
 - Node.js 20+
 - pnpm 9+
-- Docker Desktop (for local Mosquitto + playlist mock)
-- Tizen Studio + Tizen CLI (for packaging/install/run on emulator)
+- Docker Desktop
+- Tizen Studio 6.x (with IDE installer)
 
-## 4) Install
+## 4) Tizen Studio Setup (Windows)
+Install once:
+1. Install `Tizen Studio 6.x with IDE installer`.
+2. Open `Package Manager` and install:
+- `10.0 Tizen - Web app. development (CLI)`
+- `10.0 Tizen - Web app. development (IDE)`
+- `Extras - Emulator`
+- `Tizen SDK tools - Certificate Manager`
+
+Current terminal session (PowerShell):
+```powershell
+$env:TIZEN_STUDIO_HOME="C:\tizen-studio"
+$env:Path += ";C:\tizen-studio\tools;C:\tizen-studio\tools\ide\bin"
+tizen version
+sdb version
+```
+
+Create signing profile (one-time):
+1. Open `Tizen Studio > Tools > Certificate Manager`.
+2. Create profile `default`.
+3. Keep profile active as `default`.
+4. If package command fails, verify active profile:
+```powershell
+tizen security-profiles list
+```
+
+## 5) Install
 ```bash
 pnpm install
 ```
 
-## 5) Local Development Run
+## 6) Local Development Run
 Start local infrastructure:
 ```bash
 docker compose up -d
@@ -68,7 +88,7 @@ pnpm run build
 pnpm run test -- --runInBand
 ```
 
-## 6) MQTT Broker and Topics
+## 7) MQTT Broker and Topics
 Default broker:
 - `mqtt://localhost:1883`
 
@@ -92,7 +112,7 @@ Example with `deviceId=player-local`:
 
 Idempotency protects command handlers from duplicate command execution.
 
-## 7) Command Payload Examples
+## 8) Command Payload Examples
 `reload_playlist`
 ```json
 {
@@ -150,7 +170,7 @@ Idempotency protects command handlers from duplicate command execution.
 }
 ```
 
-## 8) Event Payload Examples
+## 9) Event Payload Examples
 Success:
 ```json
 {
@@ -184,7 +204,7 @@ Error:
 }
 ```
 
-## 9) Offline-First Behavior
+## 10) Offline-First Behavior
 - Manifest (`version`, playlist) is persisted locally.
 - On startup:
   - if cache exists, playback starts from cache immediately
@@ -194,51 +214,51 @@ Error:
   - app does not crash
 - Asset download uses `.part` temporary files with atomic rename.
 
-## 10) Screenshot Behavior
+## 11) Screenshot Behavior
 - First attempt: platform screenshot API (`real` source).
 - Fallback: deterministic mock base64 (`mock` source).
 - Command always returns a structured `command_result` success/error event.
 
-## 11) Logging and Monitoring
+## 12) Logging and Monitoring
 - Structured logging with `debug/info/warn/error`.
 - Command outcomes are published through MQTT events.
 - Status/heartbeat events are published periodically.
 - Logger has optional `remoteSink` extension point for external log forwarding.
 
-## 12) Tizen Build / Package / Run
+## 13) Tizen Build / Package / Run
 Build and package:
 ```bash
 pnpm tizen:build-web
 pnpm tizen:package
 ```
 
-Install to emulator:
+Check emulator target:
 ```bash
-pnpm tizen:install
+sdb devices
 ```
 
-Run app:
+Install and run:
 ```bash
-pnpm tizen:run -- -AppId org.example.signageplayer
+pnpm tizen:install -- -Target emulator-26101
+pnpm tizen:run -- -Target emulator-26101 -AppId org.example.signageplayer
 ```
 
 See full runbook:
 - `docs/RUNBOOK_TIZEN.md`
 
-## 13) Local Mock Infrastructure
+## 14) Local Mock Infrastructure
 - Mosquitto config: `docker/mosquitto/mosquitto.conf`
 - Playlist mock server: `mock/playlist-server/server.js`
 - Sample playlists:
   - `mock/sample-playlists/v1.json`
   - `mock/sample-playlists/v2.json`
 
-## 14) Trade-offs and Assumptions
+## 15) Trade-offs and Assumptions
 - Tizen-first full flow; WebOS remains adapter-level extension path.
 - TLS/auth hardening is documented as production follow-up scope.
 - Unit-heavy validation is preferred over broad emulator automation in this case timebox.
 - Browser/Tizen runtime and Node runtime are both provided for development and packaging workflows.
 
-## 15) Submission Notes
+## 16) Submission Notes
 - ESLint / Prettier / TypeScript enabled.
 - Environment-based config split is under `config/`.
-- Commit history is expected to be progressive and meaningful.
