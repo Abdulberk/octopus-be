@@ -1,0 +1,23 @@
+{
+  "version": "v2",
+  "playlist": [
+    {
+      "id": "promo-image",
+      "type": "image",
+      "url": "https://picsum.photos/1280/720?grayscale",
+      "duration": 10
+    },
+    {
+      "id": "promo-video",
+      "type": "video",
+      "url": "https://samplelib.com/lib/preview/mp4/sample-10s.mp4"
+    },
+    {
+      "id": "cta-image",
+      "type": "image",
+      "url": "https://picsum.photos/1280/720?blur=2",
+      "duration": 6
+    }
+  ]
+}
+

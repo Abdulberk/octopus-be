@@ -1,0 +1,9 @@
+{
+  "logging": {
+    "level": "debug"
+  },
+  "playlist": {
+    "syncIntervalMs": 30000
+  }
+}
+

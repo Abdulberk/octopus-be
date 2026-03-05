@@ -1,0 +1,39 @@
+{
+  "deviceId": "player-local",
+  "playlist": {
+    "endpoint": "http://localhost:4000/playlist/v1",
+    "syncIntervalMs": 60000,
+    "downloadTimeoutMs": 15000
+  },
+  "mqtt": {
+    "transport": "memory",
+    "brokerUrl": "mqtt://localhost:1883",
+    "clientId": "player-local-client",
+    "commandQos": 1,
+    "eventQos": 1,
+    "statusQos": 0,
+    "heartbeatIntervalMs": 30000,
+    "retryPolicy": {
+      "initialDelayMs": 1000,
+      "maxDelayMs": 60000,
+      "multiplier": 2,
+      "jitterRatio": 0.2
+    }
+  },
+  "cache": {
+    "root": ".player-data",
+    "manifestFileName": "manifest.json"
+  },
+  "playback": {
+    "loop": true,
+    "defaultImageDurationSec": 10
+  },
+  "logging": {
+    "level": "info"
+  },
+  "idempotency": {
+    "ttlMs": 300000,
+    "maxEntries": 1000
+  }
+}
+

@@ -1,8 +1,14 @@
-import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
+import { bootstrap } from './app/bootstrap';
 
-async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-  await app.listen(process.env.PORT ?? 3000);
-}
-bootstrap();
+void bootstrap().catch((error) => {
+  const message = error instanceof Error ? error.message : 'unknown';
+  console.error(
+    JSON.stringify({
+      ts: Date.now(),
+      level: 'error',
+      message: 'Fatal startup error',
+      context: { message },
+    }),
+  );
+  process.exit(1);
+});

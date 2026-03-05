@@ -1,0 +1,12 @@
+{
+  "logging": {
+    "level": "info"
+  },
+  "playlist": {
+    "syncIntervalMs": 120000
+  },
+  "mqtt": {
+    "transport": "node-mqtt"
+  }
+}
+

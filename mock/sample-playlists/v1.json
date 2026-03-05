@@ -1,0 +1,17 @@
+{
+  "version": "v1",
+  "playlist": [
+    {
+      "id": "hero-image",
+      "type": "image",
+      "url": "https://picsum.photos/1280/720",
+      "duration": 8
+    },
+    {
+      "id": "intro-video",
+      "type": "video",
+      "url": "https://samplelib.com/lib/preview/mp4/sample-5s.mp4"
+    }
+  ]
+}
+

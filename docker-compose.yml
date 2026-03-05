@@ -1,0 +1,18 @@
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2.0
+    container_name: signage-mosquitto
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./docker/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+
+  playlist-mock:
+    image: node:20-alpine
+    container_name: signage-playlist-mock
+    working_dir: /app
+    command: ["node", "mock/playlist-server/server.js"]
+    volumes:
+      - ./:/app
+    ports:
+      - "4000:4000"
