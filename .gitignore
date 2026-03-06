@@ -55,6 +55,9 @@ pids
 # Player artifacts
 .player-data
 .output
+.tizen-app
+.tizen-samsung-profile
+public/vendor/
 
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json

@@ -8,14 +8,40 @@
 
 ## 2) Project Preparation
 ```bash
-pnpm install
-pnpm build
+npm install
+npm run build
+npm run prepare:web-assets
 ```
 
 Optional local infra:
 ```bash
 docker compose up -d
 pnpm mock:playlist
+```
+
+### Runtime Addressing
+The packaged Tizen web app does not share the host machine's `localhost`.
+
+Before packaging, edit `public/player-config.js` so that:
+- `playlistEndpoint` points to a host/IP reachable from the emulator/device
+- `mqttUrl` points to the same reachable host/IP using WebSocket MQTT (`ws://<host>:9001/mqtt`)
+
+### Signing Profile Path
+The Tizen CLI signs packages by reading the `profiles.xml` file referenced by
+`default.profiles.path`.
+
+Preferred locations are:
+- `C:\tizen-studio-data\ide\keystore\profiles.xml`
+- `<workspace>\.metadata\.plugins\org.tizen.common.sign\profiles.xml`
+
+If your machine has a stale legacy profile path such as
+`C:\tizen-studio-data\profile\profiles.xml`, the CLI can fail with
+`security-profiles list` or `package` errors even when Certificate Manager shows
+an apparently valid profile.
+
+You can force the scripts to use the correct file in the current shell:
+```powershell
+$env:TIZEN_PROFILES_PATH="C:\tizen-studio-data\ide\keystore\profiles.xml"
 ```
 
 ## 3) Emulator Setup
@@ -50,7 +76,7 @@ pnpm tizen:install
 
 Run (replace app id if needed):
 ```bash
-pnpm tizen:run -- -AppId org.example.signageplayer
+pnpm tizen:run -- -AppId org.example
 ```
 
 ## 7) Troubleshooting
@@ -60,7 +86,7 @@ pnpm tizen:run -- -AppId org.example.signageplayer
 | Packaging/signing error | Active certificate profile and permissions |
 | App not installing | Emulator target ID and network bridge |
 | App starts but no media | Playlist endpoint reachability and URL validity |
-| MQTT commands not received | Topic/deviceId mismatch and broker connectivity |
+| MQTT commands not received | Topic/deviceId mismatch, WebSocket broker reachability, or `public/player-config.js` host |
 
 ## 8) Verification Checklist
 - [ ] App launches on emulator
@@ -68,4 +94,3 @@ pnpm tizen:run -- -AppId org.example.signageplayer
 - [ ] MQTT command topic subscription active
 - [ ] Command results published to events topic
 - [ ] Offline fallback works with existing cache
-

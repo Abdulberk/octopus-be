@@ -60,13 +60,27 @@ export class PlayerRuntime {
     this.logger.info('Soft restart requested');
     await this.playbackEngine.stop();
     await this.safeSyncPlaylistAndApply('restart');
-    await this.playbackEngine.play();
   }
 
-  private async syncPlaylistAndApply(): Promise<void> {
+  private async syncPlaylistAndApply(
+    reason: 'startup' | 'interval' | 'restart',
+  ): Promise<void> {
     const syncResult = await this.playlistSyncService.syncRemote();
-    await this.playbackEngine.loadPlaylist(syncResult.playlist);
-    if (this.playbackEngine.getState() !== 'paused') {
+    const playbackState = this.playbackEngine.getState();
+
+    const shouldReloadPlaylist =
+      reason === 'restart' || syncResult.changed === true;
+
+    if (shouldReloadPlaylist) {
+      await this.playbackEngine.loadPlaylist(syncResult.playlist);
+    }
+
+    if (shouldReloadPlaylist && playbackState !== 'paused') {
+      await this.playbackEngine.play();
+      return;
+    }
+
+    if (!shouldReloadPlaylist && playbackState === 'idle') {
       await this.playbackEngine.play();
     }
   }
@@ -75,7 +89,7 @@ export class PlayerRuntime {
     reason: 'startup' | 'interval' | 'restart',
   ): Promise<void> {
     try {
-      await this.syncPlaylistAndApply();
+      await this.syncPlaylistAndApply(reason);
       if (this.degraded) {
         this.degraded = false;
         this.logger.info('Runtime recovered from degraded mode', { reason });

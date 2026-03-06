@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<widget xmlns="http://www.w3.org/ns/widgets" xmlns:tizen="http://tizen.org/ns/widgets" id="org.example.signageplayer" version="1.0.0" viewmodes="maximized">
-  <name>SignagePlayer</name>
-  <content src="public/index.html"/>
-  <tizen:application id="org.example.signageplayer" package="org.example" required_version="7.0"/>
-  <tizen:profile name="tv-samsung"/>
-  <feature name="http://tizen.org/feature/screen.size.all"/>
-  <tizen:privilege name="http://tizen.org/privilege/internet"/>
-  <tizen:privilege name="http://tizen.org/privilege/filesystem.read"/>
-  <tizen:privilege name="http://tizen.org/privilege/filesystem.write"/>
+<widget xmlns="http://www.w3.org/ns/widgets" xmlns:tizen="http://tizen.org/ns/widgets" id="http://omniway.ai/SignagePlayer" version="1.0.0" viewmodes="maximized">
+    <tizen:application id="OctoPlay01.SignagePlayer" package="OctoPlay01" required_version="10.0"/>
+    <content src="public/index.html"/>
+    <feature name="http://tizen.org/feature/screen.size.all"/>
+    <name>SignagePlayer</name>
+    <tizen:privilege name="http://tizen.org/privilege/internet"/>
+    <tizen:privilege name="http://tizen.org/privilege/filesystem.read"/>
+    <tizen:privilege name="http://tizen.org/privilege/filesystem.write"/>
+    <tizen:profile name="tv-samsung"/>
+    <tizen:setting screen-orientation="landscape" context-menu="enable" background-support="disable" encryption="disable" install-location="auto" hwkey-event="enable"/>
 </widget>

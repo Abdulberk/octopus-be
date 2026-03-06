@@ -70,8 +70,15 @@ export function createRuntime(config: AppConfig): PlayerRuntime {
   const handlers: Partial<Record<CommandName, CommandHandler>> = {
     reload_playlist: async () => {
       const result = await playlistSyncService.syncRemote();
-      await playbackEngine.loadPlaylist(result.playlist);
-      if (playbackEngine.getState() !== 'paused') {
+      const playbackState = playbackEngine.getState();
+
+      if (result.changed) {
+        await playbackEngine.loadPlaylist(result.playlist);
+      }
+
+      if (result.changed && playbackState !== 'paused') {
+        await playbackEngine.play();
+      } else if (!result.changed && playbackState === 'idle') {
         await playbackEngine.play();
       }
 

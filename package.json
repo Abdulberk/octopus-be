@@ -18,6 +18,7 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "mock:playlist": "node mock/playlist-server/server.js",
+    "prepare:web-assets": "powershell -ExecutionPolicy Bypass -File ./scripts/prepare-web-assets.ps1",
     "tizen:build-web": "powershell -ExecutionPolicy Bypass -File ./scripts/tizen-build.ps1 -Step build-web",
     "tizen:package": "powershell -ExecutionPolicy Bypass -File ./scripts/tizen-build.ps1 -Step package",
     "tizen:install": "powershell -ExecutionPolicy Bypass -File ./scripts/tizen-run-emulator.ps1 -Step install",

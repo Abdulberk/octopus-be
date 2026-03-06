@@ -18,7 +18,7 @@ type SubscriptionHandler = (message: MqttMessage) => Promise<void> | void;
 
 export class NodeMqttTransport implements MqttTransport {
   private client?: any;
-  private readonly handlers = new Map<string, SubscriptionHandler[]>();
+  private readonly handlers = new Map<string, Set<SubscriptionHandler>>();
   private disconnectHandler?: (error?: Error) => void;
 
   constructor(
@@ -28,6 +28,12 @@ export class NodeMqttTransport implements MqttTransport {
 
   async connect(): Promise<void> {
     const mqtt = tryLoadMqttLibrary();
+
+    if (this.client) {
+      this.client.removeAllListeners?.();
+      this.client.end?.(true);
+      this.client = undefined;
+    }
 
     this.client = mqtt.connect(this.options.brokerUrl, {
       username: this.options.username,
@@ -66,10 +72,13 @@ export class NodeMqttTransport implements MqttTransport {
     }
 
     const client = this.client;
+    this.client = undefined;
 
     await new Promise<void>((resolve) => {
       client.end(false, {}, () => resolve());
     });
+
+    client.removeAllListeners?.();
   }
 
   async subscribe(
@@ -95,8 +104,8 @@ export class NodeMqttTransport implements MqttTransport {
       });
     });
 
-    const currentHandlers = this.handlers.get(topic) ?? [];
-    currentHandlers.push(handler);
+    const currentHandlers = this.handlers.get(topic) ?? new Set();
+    currentHandlers.add(handler);
     this.handlers.set(topic, currentHandlers);
   }
 
@@ -130,7 +139,7 @@ export class NodeMqttTransport implements MqttTransport {
   ): Promise<void> {
     const handlers = Array.from(this.handlers.entries())
       .filter(([filter]) => topicMatches(filter, topic))
-      .flatMap(([, value]) => value);
+      .flatMap(([, value]) => Array.from(value));
 
     if (handlers.length === 0) {
       this.logger.debug('Received MQTT message with no matching handler', {

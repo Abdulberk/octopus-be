@@ -1,0 +1,35 @@
+(function setPlayerConfig() {
+  'use strict';
+
+  var host =
+    typeof window !== 'undefined' &&
+    window.location &&
+    typeof window.location.hostname === 'string' &&
+    window.location.hostname.length > 0
+      ? window.location.hostname
+      : '127.0.0.1';
+
+  window.__PLAYER_CONFIG__ = Object.assign(
+    {
+      host: host,
+      playlistEndpoint: 'http://' + host + ':4000/playlist/v1',
+      mqttUrl: 'ws://' + host + ':9001/mqtt',
+      mqttConnectTimeoutMs: 7_000,
+      playlistSyncIntervalMs: 30_000,
+      playlistDownloadTimeoutMs: 15_000,
+      heartbeatIntervalMs: 30_000,
+      commandQos: 1,
+      eventQos: 1,
+      statusQos: 0,
+      loop: true,
+      defaultImageDurationSec: 10,
+      idempotencyTtlMs: 5 * 60_000,
+      idempotencyMaxEntries: 1_000,
+      reconnectInitialMs: 1_000,
+      reconnectMaxMs: 60_000,
+      reconnectMultiplier: 2,
+      reconnectJitterRatio: 0.2,
+    },
+    window.__PLAYER_CONFIG__ || {},
+  );
+})();

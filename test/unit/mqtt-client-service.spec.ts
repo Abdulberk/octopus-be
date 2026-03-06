@@ -4,6 +4,7 @@ import type {
   MqttQos,
   MqttTransport,
 } from '../../src/core/contracts/mqtt';
+import { InMemoryMqttTransport } from '../../src/infrastructure/mqtt/in-memory-mqtt-transport';
 import { MqttClientService } from '../../src/infrastructure/mqtt/mqtt-client-service';
 
 class FlakyTransport implements MqttTransport {
@@ -105,6 +106,48 @@ describe('MqttClientService', () => {
     await Promise.resolve();
     expect(transport.connectAttempts).toBe(3);
     expect(transport.subscribeCalls).toBe(1);
+
+    await service.stop();
+  });
+
+  it('does not process the same MQTT message twice after reconnect', async () => {
+    const transport = new InMemoryMqttTransport();
+    const service = new MqttClientService(transport, noopLogger, {
+      commandTopic: 'players/test-device/commands',
+      eventsTopic: 'players/test-device/events',
+      statusTopic: 'players/test-device/status',
+      commandQos: 1,
+      eventQos: 1,
+      statusQos: 0,
+      reconnectPolicy: {
+        initialDelayMs: 1_000,
+        maxDelayMs: 60_000,
+        multiplier: 2,
+        jitterRatio: 0,
+      },
+      heartbeatIntervalMs: 30_000,
+    });
+
+    let handled = 0;
+    await service.start(async () => {
+      handled += 1;
+    });
+
+    await transport.disconnect();
+    jest.advanceTimersByTime(1_000);
+    await Promise.resolve();
+
+    await transport.injectMessage(
+      'players/test-device/commands',
+      JSON.stringify({
+        command: 'play',
+        correlationId: 'play-1',
+        timestamp: Date.now(),
+      }),
+      1,
+    );
+
+    expect(handled).toBe(1);
 
     await service.stop();
   });

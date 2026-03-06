@@ -8,7 +8,7 @@ type SubscriptionHandler = (message: MqttMessage) => Promise<void> | void;
 
 export class InMemoryMqttTransport implements MqttTransport {
   private connected = false;
-  private readonly subscriptions = new Map<string, SubscriptionHandler[]>();
+  private readonly subscriptions = new Map<string, Set<SubscriptionHandler>>();
   private disconnectHandler?: (error?: Error) => void;
 
   async connect(): Promise<void> {
@@ -27,8 +27,8 @@ export class InMemoryMqttTransport implements MqttTransport {
     _qos: MqttQos,
     handler: SubscriptionHandler,
   ): Promise<void> {
-    const current = this.subscriptions.get(topic) ?? [];
-    current.push(handler);
+    const current = this.subscriptions.get(topic) ?? new Set();
+    current.add(handler);
     this.subscriptions.set(topic, current);
   }
 
@@ -66,7 +66,7 @@ export class InMemoryMqttTransport implements MqttTransport {
 
     const handlers = Array.from(this.subscriptions.entries())
       .filter(([filter]) => topicMatches(filter, topic))
-      .flatMap(([, value]) => value);
+      .flatMap(([, value]) => Array.from(value));
 
     for (const handler of handlers) {
       await handler(message);

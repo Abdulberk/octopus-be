@@ -1,5 +1,9 @@
 import type { Logger } from '../../core/contracts/logger';
-import type { MqttQos, MqttTransport } from '../../core/contracts/mqtt';
+import type {
+  MqttMessage,
+  MqttQos,
+  MqttTransport,
+} from '../../core/contracts/mqtt';
 import type { CommandResultEvent, StatusEvent } from '../../core/domain/events';
 import { computeBackoffDelay, type RetryPolicy } from '../../core/domain/retry';
 
@@ -23,6 +27,15 @@ export class MqttClientService {
   private reconnectTimer?: NodeJS.Timeout;
   private heartbeatTimer?: NodeJS.Timeout;
   private commandHandler?: CommandPayloadHandler;
+  private readonly inboundMessageHandler = async (
+    message: MqttMessage,
+  ): Promise<void> => {
+    if (!this.commandHandler) {
+      return;
+    }
+
+    await this.commandHandler(message.payload);
+  };
 
   constructor(
     private readonly transport: MqttTransport,
@@ -97,13 +110,7 @@ export class MqttClientService {
       await this.transport.subscribe(
         this.options.commandTopic,
         this.options.commandQos,
-        async (message) => {
-          if (!this.commandHandler) {
-            return;
-          }
-
-          await this.commandHandler(message.payload);
-        },
+        this.inboundMessageHandler,
       );
 
       await this.safePublishStatus({

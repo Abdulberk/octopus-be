@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<profiles active="default" version="2.2">
+  <profile name="default">
+    <profileitem
+      ca="C:/tizen-studio/tools/certificate-generator/certificates/developer/tizen-developer-ca.cer"
+      distributor="0"
+      key="C:/Users/Taha/SamsungCertificate/default/author.p12"
+      password="C:/Users/Taha/SamsungCertificate/default/author.pwd"
+      rootca="" />
+    <profileitem
+      ca="C:/tizen-studio/tools/certificate-generator/certificates/distributor/tizen-distributor-ca.cer"
+      distributor="1"
+      key="C:/tizen-studio/tools/certificate-generator/certificates/distributor/tizen-distributor-signer.p12"
+      password="C:/tizen-studio-data/tools/certificate-generator/certificates/distributor/tizen-distributor-signer.pwd"
+      rootca="" />
+  </profile>
+</profiles>

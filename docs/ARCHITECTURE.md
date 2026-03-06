@@ -8,6 +8,16 @@ The player is organized into five primary layers:
 4. `player`: playback engine and renderer strategies
 5. `platform`: Tizen/Web platform-specific adapters
 
+## Runtime Targets
+- `src/*`: Node-driven runtime used for local service validation, deterministic unit tests, and operational logic.
+- `public/*`: Tizen/browser delivery bundle used in packaged web app execution.
+
+Both targets are expected to stay behaviorally aligned for:
+- playlist validation and periodic sync
+- command validation and idempotent command results
+- MQTT reconnect behavior
+- offline cold-start fallback
+
 ## Module Boundaries
 | Module | Responsibility | Depends On |
 | --- | --- | --- |
@@ -41,9 +51,9 @@ The player is organized into five primary layers:
 
 ## Offline-First Cache Lifecycle
 1. Playlist JSON is normalized and versioned (`version` or hash).
-2. Assets are downloaded as `.part` temp files.
-3. On success, temp files are atomically renamed.
-4. Manifest file is atomically written after asset processing.
+2. Node runtime downloads assets as `.part` temp files.
+3. Node runtime atomically renames assets and manifest after processing.
+4. Tizen/browser runtime persists manifest in `localStorage` and media blobs in `IndexedDB`.
 5. On startup, cached manifest is loaded if present.
 6. On remote failure, runtime continues from cached manifest.
 
@@ -63,4 +73,3 @@ The player is organized into five primary layers:
 - Platform API calls are isolated behind `PlatformAdapter`.
 - Web fallback adapter demonstrates compatibility for non-Tizen environments.
 - A future `WebOsPlatformAdapter` can be added without changing core/services logic.
-

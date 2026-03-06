@@ -4,7 +4,8 @@ Operational README for local run, MQTT validation, and Tizen package flow.
 
 ## 1) Scope
 This repository provides:
-- local playback runtime
+- Node-based local playback/runtime harness
+- Tizen/browser playback package under `public/`
 - MQTT command/event channel
 - offline cache behavior
 - Tizen packaging and emulator run flow
@@ -31,7 +32,7 @@ Detailed documents:
 
 ## 3) Requirements
 - Node.js 20+
-- pnpm 9+
+- npm 10+ or pnpm 9+
 - Docker Desktop
 - Tizen Studio 6.x (with IDE installer)
 
@@ -60,9 +61,19 @@ Create signing profile (one-time):
 ```powershell
 tizen security-profiles list
 ```
+5. If CLI still fails to read the profile, ensure the Tizen CLI config points at a CLI-compatible `profiles.xml`.
+Official Tizen CLI documentation expects `default.profiles.path` to target a file such as:
+`C:\tizen-studio-data\ide\keystore\profiles.xml`
+or a workspace `.metadata\.plugins\org.tizen.common.sign\profiles.xml`.
+You can override it per-session with:
+```powershell
+$env:TIZEN_PROFILES_PATH="C:\tizen-studio-data\ide\keystore\profiles.xml"
+```
 
 ## 5) Install
 ```bash
+npm install
+# or
 pnpm install
 ```
 
@@ -70,6 +81,11 @@ pnpm install
 Start local infrastructure:
 ```bash
 docker compose up -d
+```
+
+Prepare browser/Tizen runtime assets:
+```bash
+npm run prepare:web-assets
 ```
 
 Run player runtime:
@@ -89,8 +105,11 @@ pnpm run test -- --runInBand
 ```
 
 ## 7) MQTT Broker and Topics
-Default broker:
+Default Node runtime broker:
 - `mqtt://localhost:1883`
+
+Default Tizen/browser broker:
+- `ws://<host>:9001/mqtt`
 
 Topic structure:
 - Subscribe: `players/{deviceId}/commands`
@@ -206,6 +225,8 @@ Error:
 
 ## 10) Offline-First Behavior
 - Manifest (`version`, playlist) is persisted locally.
+- Node runtime stores manifest/assets under `.player-data`.
+- Tizen/browser runtime stores manifest in `localStorage` and media assets in `IndexedDB`.
 - On startup:
   - if cache exists, playback starts from cache immediately
   - remote sync runs in background
@@ -213,6 +234,7 @@ Error:
   - runtime continues in degraded mode
   - app does not crash
 - Asset download uses `.part` temporary files with atomic rename.
+- Browser/Tizen asset persistence requires source URLs to be fetchable from the runtime (CORS-safe media URLs are recommended).
 
 ## 11) Screenshot Behavior
 - First attempt: platform screenshot API (`real` source).
@@ -228,9 +250,13 @@ Error:
 ## 13) Tizen Build / Package / Run
 Build and package:
 ```bash
+npm run prepare:web-assets
 pnpm tizen:build-web
 pnpm tizen:package
 ```
+
+Before packaging for emulator/device, update `public/player-config.js` with a host/IP that is reachable from the TV runtime.
+Do not leave `localhost` unless the broker and playlist API are running inside the same device/emulator environment.
 
 Check emulator target:
 ```bash
@@ -240,7 +266,7 @@ sdb devices
 Install and run:
 ```bash
 pnpm tizen:install -- -Target emulator-26101
-pnpm tizen:run -- -Target emulator-26101 -AppId org.example.signageplayer
+pnpm tizen:run -- -Target emulator-26101 -AppId org.example
 ```
 
 See full runbook:
@@ -248,6 +274,9 @@ See full runbook:
 
 ## 14) Local Mock Infrastructure
 - Mosquitto config: `docker/mosquitto/mosquitto.conf`
+- Mosquitto exposes:
+  - TCP MQTT on `1883`
+  - WebSocket MQTT on `9001`
 - Playlist mock server: `mock/playlist-server/server.js`
 - Sample playlists:
   - `mock/sample-playlists/v1.json`
@@ -257,7 +286,7 @@ See full runbook:
 - Tizen-first full flow; WebOS remains adapter-level extension path.
 - TLS/auth hardening is documented as production follow-up scope.
 - Unit-heavy validation is preferred over broad emulator automation in this case timebox.
-- Browser/Tizen runtime and Node runtime are both provided for development and packaging workflows.
+- Node runtime and Tizen/browser runtime are kept behaviorally aligned for playlist sync, command handling, reconnect, and offline fallback.
 
 ## 16) Submission Notes
 - ESLint / Prettier / TypeScript enabled.
