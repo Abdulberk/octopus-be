@@ -4,14 +4,14 @@
     {
       "id": "hero-image",
       "type": "image",
-      "url": "https://picsum.photos/1280/720",
+      "url": "/assets/hero-blue.svg",
       "duration": 8
     },
     {
-      "id": "intro-video",
-      "type": "video",
-      "url": "https://samplelib.com/lib/preview/mp4/sample-5s.mp4"
+      "id": "promo-grid",
+      "type": "image",
+      "url": "/assets/promo-grid.svg",
+      "duration": 8
     }
   ]
 }
-

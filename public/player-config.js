@@ -1,13 +1,7 @@
 (function setPlayerConfig() {
   'use strict';
 
-  var host =
-    typeof window !== 'undefined' &&
-    window.location &&
-    typeof window.location.hostname === 'string' &&
-    window.location.hostname.length > 0
-      ? window.location.hostname
-      : '127.0.0.1';
+  var host = '192.168.1.10';
 
   window.__PLAYER_CONFIG__ = Object.assign(
     {

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#06243a" />
+      <stop offset="100%" stop-color="#1496d1" />
+    </linearGradient>
+  </defs>
+  <rect width="1280" height="720" fill="url(#bg)" />
+  <circle cx="1060" cy="160" r="180" fill="#6be3ff" opacity="0.25" />
+  <circle cx="190" cy="580" r="220" fill="#0b4d6e" opacity="0.45" />
+  <text x="110" y="230" fill="#ffffff" font-size="36" font-family="Segoe UI, Arial, sans-serif" opacity="0.8">
+    Omniway Signage
+  </text>
+  <text x="110" y="320" fill="#ffffff" font-size="84" font-weight="700" font-family="Segoe UI, Arial, sans-serif">
+    Connected Display
+  </text>
+  <text x="110" y="390" fill="#d9f4ff" font-size="30" font-family="Segoe UI, Arial, sans-serif">
+    Local mock playlist is active on the emulator.
+  </text>
+  <rect x="110" y="470" width="310" height="92" rx="18" fill="#ffffff" opacity="0.14" />
+  <text x="150" y="528" fill="#ffffff" font-size="32" font-family="Segoe UI, Arial, sans-serif">
+    MQTT + Playlist OK
+  </text>
+</svg>

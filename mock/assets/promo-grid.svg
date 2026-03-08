@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <rect width="1280" height="720" fill="#101217" />
+  <g fill="#243142">
+    <rect x="88" y="88" width="220" height="220" rx="26" />
+    <rect x="338" y="88" width="220" height="220" rx="26" />
+    <rect x="588" y="88" width="220" height="220" rx="26" />
+    <rect x="838" y="88" width="220" height="220" rx="26" />
+    <rect x="213" y="338" width="220" height="220" rx="26" />
+    <rect x="463" y="338" width="220" height="220" rx="26" />
+    <rect x="713" y="338" width="220" height="220" rx="26" />
+  </g>
+  <g fill="#7ce577">
+    <rect x="338" y="88" width="220" height="220" rx="26" />
+    <rect x="713" y="338" width="220" height="220" rx="26" />
+  </g>
+  <text x="96" y="640" fill="#ffffff" font-size="68" font-weight="700" font-family="Segoe UI, Arial, sans-serif">
+    Promotion Slots Synced
+  </text>
+  <text x="98" y="684" fill="#b7bdc8" font-size="24" font-family="Segoe UI, Arial, sans-serif">
+    This frame is served locally from mock/assets for deterministic emulator playback.
+  </text>
+</svg>

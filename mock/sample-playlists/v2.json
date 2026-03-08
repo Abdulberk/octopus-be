@@ -4,20 +4,20 @@
     {
       "id": "promo-image",
       "type": "image",
-      "url": "https://picsum.photos/1280/720?grayscale",
+      "url": "/assets/promo-grid.svg",
       "duration": 10
-    },
-    {
-      "id": "promo-video",
-      "type": "video",
-      "url": "https://samplelib.com/lib/preview/mp4/sample-10s.mp4"
     },
     {
       "id": "cta-image",
       "type": "image",
-      "url": "https://picsum.photos/1280/720?blur=2",
+      "url": "/assets/cta-signal.svg",
+      "duration": 7
+    },
+    {
+      "id": "hero-image",
+      "type": "image",
+      "url": "/assets/hero-blue.svg",
       "duration": 6
     }
   ]
 }
-
