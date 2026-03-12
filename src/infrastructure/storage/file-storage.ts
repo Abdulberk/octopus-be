@@ -1,12 +1,13 @@
 import {
   access,
+  readdir,
   mkdir,
   readFile,
   rename,
   rm,
   writeFile,
 } from 'node:fs/promises';
-import { dirname } from 'node:path';
+import { dirname, join } from 'node:path';
 import type { StorageAdapter } from '../../core/contracts/storage';
 
 export class FileStorage implements StorageAdapter {
@@ -46,6 +47,15 @@ export class FileStorage implements StorageAdapter {
 
   async readFile(path: string): Promise<Buffer> {
     return await readFile(path);
+  }
+
+  async list(path: string): Promise<string[]> {
+    try {
+      const entries = await readdir(path);
+      return entries.map((entry) => join(path, entry));
+    } catch {
+      return [];
+    }
   }
 
   async rename(fromPath: string, toPath: string): Promise<void> {

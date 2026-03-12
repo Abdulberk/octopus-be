@@ -1,3 +1,4 @@
+import { existsSync, readFileSync } from 'node:fs';
 import type { Logger } from '../../core/contracts/logger';
 import type {
   MqttMessage,
@@ -12,6 +13,14 @@ interface NodeMqttTransportOptions {
   password?: string;
   clientId?: string;
   keepaliveSec?: number;
+  tls?: {
+    caPath?: string;
+    certPath?: string;
+    keyPath?: string;
+    passphrase?: string;
+    rejectUnauthorized: boolean;
+    serverName?: string;
+  };
 }
 
 type SubscriptionHandler = (message: MqttMessage) => Promise<void> | void;
@@ -41,6 +50,15 @@ export class NodeMqttTransport implements MqttTransport {
       clientId: this.options.clientId,
       keepalive: this.options.keepaliveSec ?? 60,
       reconnectPeriod: 0,
+      ca: readOptionalTlsFile(this.options.tls?.caPath, 'MQTT CA certificate'),
+      cert: readOptionalTlsFile(
+        this.options.tls?.certPath,
+        'MQTT client certificate',
+      ),
+      key: readOptionalTlsFile(this.options.tls?.keyPath, 'MQTT client key'),
+      passphrase: this.options.tls?.passphrase,
+      rejectUnauthorized: this.options.tls?.rejectUnauthorized ?? true,
+      servername: this.options.tls?.serverName,
     });
 
     await new Promise<void>((resolve, reject) => {
@@ -201,4 +219,23 @@ function topicMatches(filter: string, topic: string): boolean {
   }
 
   return filterTokens.length === topicTokens.length;
+}
+
+function readOptionalTlsFile(
+  path: string | undefined,
+  label: string,
+): Buffer | undefined {
+  if (!path) {
+    return undefined;
+  }
+
+  if (!existsSync(path)) {
+    throw new AppError(
+      'MQTT_TLS_CONFIG_INVALID',
+      `${label} was not found at ${path}`,
+      false,
+    );
+  }
+
+  return readFileSync(path);
 }

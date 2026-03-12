@@ -23,6 +23,7 @@ export interface PlaylistSyncResult {
 
 export class PlaylistSyncService {
   private activeManifest?: StorageManifest;
+  private syncInFlight?: Promise<PlaylistSyncResult>;
 
   constructor(
     private readonly httpClient: HttpClient,
@@ -57,6 +58,25 @@ export class PlaylistSyncService {
   }
 
   async syncRemote(): Promise<PlaylistSyncResult> {
+    if (this.syncInFlight) {
+      this.logger.debug(
+        'Playlist sync already in progress, reusing in-flight sync',
+      );
+      return await this.syncInFlight;
+    }
+
+    this.syncInFlight = this.performSyncRemote().finally(() => {
+      this.syncInFlight = undefined;
+    });
+
+    return await this.syncInFlight;
+  }
+
+  getActivePlaylist(): PlaylistItem[] {
+    return this.activeManifest?.playlist ?? [];
+  }
+
+  private async performSyncRemote(): Promise<PlaylistSyncResult> {
     try {
       const raw = await this.httpClient.fetchJson<unknown>(
         this.options.endpoint,
@@ -65,16 +85,50 @@ export class PlaylistSyncService {
       const sourceHash = sha256Text(JSON.stringify(normalized.playlist));
       const version = normalized.version ?? sourceHash;
 
-      if (this.activeManifest && this.activeManifest.version === version) {
-        return {
-          source: 'remote',
-          changed: false,
-          version,
-          playlist: this.activeManifest.playlist,
-        };
+      if (this.activeManifest) {
+        const sameSource = this.activeManifest.sourceHash === sourceHash;
+        const legacySameManifest =
+          !this.activeManifest.sourceHash &&
+          this.activeManifest.version === version;
+
+        if (sameSource || legacySameManifest) {
+          if (
+            this.activeManifest.version !== version ||
+            this.activeManifest.sourceHash !== sourceHash
+          ) {
+            const refreshedManifest: StorageManifest = {
+              ...this.activeManifest,
+              version,
+              sourceHash,
+              updatedAt: Date.now(),
+            };
+            await this.storage.writeJsonAtomic(
+              this.getManifestPath(),
+              refreshedManifest,
+            );
+            this.activeManifest = refreshedManifest;
+          }
+
+          return {
+            source: 'remote',
+            changed: false,
+            version,
+            playlist: this.activeManifest.playlist,
+          };
+        }
+
+        if (this.activeManifest.version === version) {
+          this.logger.warn(
+            'Remote playlist content changed without a version bump',
+            {
+              version,
+            },
+          );
+        }
       }
 
       const playlistWithAssets = await this.cacheAssets(normalized.playlist);
+      await this.removeStaleAssets(playlistWithAssets);
       const nextManifest: StorageManifest = {
         version,
         sourceHash,
@@ -115,10 +169,6 @@ export class PlaylistSyncService {
         playlist: this.activeManifest.playlist,
       };
     }
-  }
-
-  getActivePlaylist(): PlaylistItem[] {
-    return this.activeManifest?.playlist ?? [];
   }
 
   private async cacheAssets(items: PlaylistItem[]): Promise<PlaylistItem[]> {
@@ -183,6 +233,23 @@ export class PlaylistSyncService {
 
   private getAssetsDirectory(): string {
     return join(this.options.cacheRoot, 'assets');
+  }
+
+  private async removeStaleAssets(items: PlaylistItem[]): Promise<void> {
+    const expectedPaths = new Set(
+      items
+        .map((item) => item.localPath)
+        .filter((value): value is string => typeof value === 'string'),
+    );
+
+    const cachedPaths = await this.storage.list(this.getAssetsDirectory());
+    for (const cachedPath of cachedPaths) {
+      if (cachedPath.endsWith('.part') || expectedPaths.has(cachedPath)) {
+        continue;
+      }
+
+      await this.storage.remove(cachedPath);
+    }
   }
 }
 

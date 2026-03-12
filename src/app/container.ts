@@ -185,26 +185,16 @@ function createRenderer(): PlaybackRenderer {
 
 function createMqttTransport(config: AppConfig, logger: StructuredLogger) {
   if (config.mqtt.transport === 'node-mqtt') {
-    try {
-      return new NodeMqttTransport(
-        {
-          brokerUrl: config.mqtt.brokerUrl,
-          username: config.mqtt.username,
-          password: config.mqtt.password,
-          clientId: config.mqtt.clientId,
-        },
-        logger,
-      );
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'unknown';
-      logger.warn(
-        'Node MQTT transport initialization failed, falling back to in-memory',
-        {
-          message,
-        },
-      );
-      return new InMemoryMqttTransport();
-    }
+    return new NodeMqttTransport(
+      {
+        brokerUrl: config.mqtt.brokerUrl,
+        username: config.mqtt.username,
+        password: config.mqtt.password,
+        clientId: config.mqtt.clientId,
+        tls: config.mqtt.tls,
+      },
+      logger,
+    );
   }
 
   return new InMemoryMqttTransport();

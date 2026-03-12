@@ -66,7 +66,6 @@ Deferred intentionally:
 ## Future Work
 1. Add `WebOsPlatformAdapter` and validate command parity.
 2. Integrate authenticated TLS MQTT transport and cert rotation policy.
-3. Add CI workflows for lint/test/build and optional emulator smoke checks.
+3. Add optional emulator smoke checks on top of the CI lint/test/build pipeline.
 4. Extend command set with diagnostics and health introspection.
 5. Add metrics exporter for memory/runtime performance trend analysis.
-

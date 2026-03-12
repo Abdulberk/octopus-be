@@ -36,6 +36,11 @@ export class PlayerRuntime {
     await this.mqttClientService.start(async (payload) => {
       await this.handleIncomingCommand(payload);
     });
+    if (this.degraded) {
+      await this.mqttClientService.publishRuntimeStatus('degraded', {
+        reason: 'startup',
+      });
+    }
     this.lifecycleManager.start();
 
     this.playlistSyncTimer = setInterval(() => {
@@ -93,6 +98,10 @@ export class PlayerRuntime {
       if (this.degraded) {
         this.degraded = false;
         this.logger.info('Runtime recovered from degraded mode', { reason });
+        await this.mqttClientService.publishRuntimeStatus('online', {
+          reason: 'recovered',
+          trigger: reason,
+        });
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown';
@@ -104,6 +113,10 @@ export class PlayerRuntime {
           message,
         },
       );
+      await this.mqttClientService.publishRuntimeStatus('degraded', {
+        reason,
+        message,
+      });
     }
   }
 

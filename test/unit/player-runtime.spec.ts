@@ -61,6 +61,7 @@ class FakeMqttClientService {
   );
   public stop = jest.fn(async () => undefined);
   public publishCommandResult = jest.fn(async () => undefined);
+  public publishRuntimeStatus = jest.fn(async () => undefined);
 }
 
 class FakeCommandDispatcher {

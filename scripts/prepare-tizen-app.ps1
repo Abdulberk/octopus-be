@@ -27,6 +27,56 @@ function Copy-DirectoryContent {
   }
 }
 
+function Add-StagedPlayerConfigOverrides {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$PlayerConfigPath
+  )
+
+  $overrides = [ordered]@{}
+
+  if ($env:PLAYER_HOST) {
+    $overrides.host = $env:PLAYER_HOST
+  }
+
+  if ($env:PLAYER_PLAYLIST_ENDPOINT) {
+    $overrides.playlistEndpoint = $env:PLAYER_PLAYLIST_ENDPOINT
+  }
+
+  if ($env:PLAYER_MQTT_URL) {
+    $overrides.mqttUrl = $env:PLAYER_MQTT_URL
+  }
+
+  if ($env:PLAYER_DEVICE_ID) {
+    $overrides.deviceId = $env:PLAYER_DEVICE_ID
+  }
+
+  if ($env:PLAYER_MQTT_USERNAME) {
+    $overrides.mqttUsername = $env:PLAYER_MQTT_USERNAME
+  }
+
+  if ($env:PLAYER_MQTT_PASSWORD) {
+    $overrides.mqttPassword = $env:PLAYER_MQTT_PASSWORD
+  }
+
+  if ($overrides.Count -eq 0) {
+    Write-Warning "No PLAYER_* overrides were provided. The staged Tizen app will use runtime defaults."
+    return
+  }
+
+  $json = $overrides | ConvertTo-Json -Compress
+  $snippet = @"
+
+(function applyStagedPlayerConfigOverrides() {
+  'use strict';
+  window.__PLAYER_CONFIG__ = Object.assign($json, window.__PLAYER_CONFIG__ || {});
+})();
+"@
+
+  Add-Content -Path $PlayerConfigPath -Value $snippet -Encoding ASCII
+  Write-Host "Applied staged player config overrides to $PlayerConfigPath"
+}
+
 if (-not (Test-Path $publicSource)) {
   throw "Public directory was not found at '$publicSource'."
 }
@@ -61,5 +111,6 @@ Copy-DirectoryContent -Source $publicSource -Destination $publicTarget
 Copy-Item -Path $projectFileSource -Destination (Join-Path $stagingRoot ".project") -Force
 Copy-Item -Path $tprojectFileSource -Destination (Join-Path $stagingRoot ".tproject") -Force
 Copy-Item -Path $settingsSource -Destination (Join-Path $stagingRoot ".settings") -Recurse -Force
+Add-StagedPlayerConfigOverrides -PlayerConfigPath (Join-Path $publicTarget "player-config.js")
 
 Write-Host "Prepared Tizen staging app at $stagingRoot"

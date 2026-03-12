@@ -17,6 +17,7 @@ export class PlaybackEngine {
   private playToken = 0;
   private imageDeadlineMs?: number;
   private imageRemainingMs?: number;
+  private hasActiveMedia = false;
 
   constructor(
     private readonly renderer: PlaybackRenderer,
@@ -25,6 +26,19 @@ export class PlaybackEngine {
   ) {}
 
   async loadPlaylist(items: PlaylistItem[]): Promise<void> {
+    const previousState = this.state;
+    this.playToken += 1;
+    this.imageDeadlineMs = undefined;
+    this.imageRemainingMs = undefined;
+    this.hasActiveMedia = false;
+
+    if (this.transitionTimer) {
+      clearTimeout(this.transitionTimer);
+      this.transitionTimer = undefined;
+    }
+
+    await this.renderer.stop();
+
     this.playlist = items;
     this.currentIndex = 0;
 
@@ -32,8 +46,14 @@ export class PlaybackEngine {
       itemCount: items.length,
     });
 
-    if (this.state === 'playing') {
-      await this.playCurrentItem(true);
+    if (items.length === 0) {
+      this.state = 'idle';
+      return;
+    }
+
+    this.state = previousState;
+    if (previousState === 'playing') {
+      await this.playCurrentItem(false);
     }
   }
 
@@ -45,11 +65,22 @@ export class PlaybackEngine {
 
     if (this.state === 'paused') {
       this.state = 'playing';
-      if (this.isCurrentImage() && this.imageRemainingMs !== undefined) {
+      if (
+        this.hasActiveMedia &&
+        this.isCurrentImage() &&
+        this.imageRemainingMs !== undefined
+      ) {
         this.imageDeadlineMs = Date.now() + this.imageRemainingMs;
         this.scheduleNextTransition(this.imageRemainingMs);
+        return;
       }
-      await this.renderer.resume();
+
+      if (this.hasActiveMedia) {
+        await this.renderer.resume();
+        return;
+      }
+
+      await this.playCurrentItem(false);
       return;
     }
 
@@ -80,6 +111,7 @@ export class PlaybackEngine {
     this.playToken += 1;
     this.imageDeadlineMs = undefined;
     this.imageRemainingMs = undefined;
+    this.hasActiveMedia = false;
 
     if (this.transitionTimer) {
       clearTimeout(this.transitionTimer);
@@ -137,6 +169,7 @@ export class PlaybackEngine {
 
     if (resetRenderer) {
       await this.renderer.stop();
+      this.hasActiveMedia = false;
     }
 
     try {
@@ -150,6 +183,7 @@ export class PlaybackEngine {
         this.imageDeadlineMs = Date.now() + durationMs;
 
         await this.renderer.renderImage(source);
+        this.hasActiveMedia = true;
         this.scheduleNextTransition(durationMs, token);
       } else {
         this.imageRemainingMs = undefined;
@@ -160,8 +194,10 @@ export class PlaybackEngine {
           }
           void this.goToNextItem();
         });
+        this.hasActiveMedia = true;
       }
     } catch (error) {
+      this.hasActiveMedia = false;
       const message = error instanceof Error ? error.message : 'unknown';
       this.logger.warn('Failed to render media item, skipping to next', {
         index: this.currentIndex,

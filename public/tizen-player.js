@@ -30,8 +30,10 @@
     heartbeatTimer: null,
     syncTimer: null,
     syncInFlight: false,
+    degraded: false,
     resumeOnVisible: false,
     volume: 100,
+    hasActiveMedia: false,
     assetDbPromise: null,
     assetCacheWarned: false,
   };
@@ -400,6 +402,22 @@
     return bytesToHex(new Uint8Array(hashBuffer));
   }
 
+  async function computeTextSha256Hex(value) {
+    if (
+      typeof window === 'undefined' ||
+      !window.crypto ||
+      !window.crypto.subtle ||
+      typeof TextEncoder === 'undefined'
+    ) {
+      return hashString(value);
+    }
+
+    var encoder = new TextEncoder();
+    var buffer = encoder.encode(value);
+    var hashBuffer = await window.crypto.subtle.digest('SHA-256', buffer);
+    return bytesToHex(new Uint8Array(hashBuffer));
+  }
+
   async function fetchWithTimeout(url, timeoutMs) {
     var controller = typeof AbortController !== 'undefined'
       ? new AbortController()
@@ -471,14 +489,12 @@
       };
     });
 
-    var sourceHash = hashString(JSON.stringify(normalized));
     return {
       playlist: normalized,
       version:
         typeof value.version === 'string' && value.version.length > 0
           ? value.version
-          : sourceHash,
-      sourceHash: sourceHash,
+          : undefined,
     };
   }
 
@@ -570,23 +586,58 @@
 
       var payload = await response.json();
       var normalized = validatePlaylistResponse(payload);
-      if (
+      var sourceHash = await computeTextSha256Hex(
+        JSON.stringify(normalized.playlist),
+      );
+      var version = normalized.version || sourceHash;
+      var sameVersion =
         cachedManifest &&
         typeof cachedManifest.version === 'string' &&
-        cachedManifest.version === normalized.version
+        cachedManifest.version === version;
+      var sameSource =
+        cachedManifest &&
+        typeof cachedManifest.sourceHash === 'string' &&
+        cachedManifest.sourceHash === sourceHash;
+      var legacySameManifest =
+        cachedManifest &&
+        !cachedManifest.sourceHash &&
+        sameVersion;
+
+      if (
+        cachedManifest &&
+        Array.isArray(cachedManifest.playlist) &&
+        (sameSource || legacySameManifest)
       ) {
+        if (
+          cachedManifest.version !== version ||
+          cachedManifest.sourceHash !== sourceHash
+        ) {
+          saveManifest({
+            version: version,
+            sourceHash: sourceHash,
+            updatedAt: Date.now(),
+            playlist: cachedManifest.playlist,
+          });
+        }
+
         return {
           source: 'remote',
           changed: false,
-          version: normalized.version,
-          playlist: cachedManifest.playlist || [],
+          version: version,
+          playlist: cachedManifest.playlist,
         };
+      }
+
+      if (sameVersion && !sameSource) {
+        log('warn', 'Remote playlist content changed without a version bump', {
+          version: version,
+        });
       }
 
       var playlistWithAssets = await cacheAssets(normalized.playlist);
       var manifest = {
-        version: normalized.version,
-        sourceHash: normalized.sourceHash,
+        version: version,
+        sourceHash: sourceHash,
         updatedAt: Date.now(),
         playlist: playlistWithAssets,
       };
@@ -640,6 +691,8 @@
       URL.revokeObjectURL(state.currentObjectUrl);
       state.currentObjectUrl = null;
     }
+
+    state.hasActiveMedia = false;
   }
 
   function stopCurrentMedia() {
@@ -652,8 +705,14 @@
   }
 
   function loadPlaylist(items) {
+    var previousState = state.playbackState;
+    state.playToken += 1;
+    state.imageDeadlineMs = null;
+    state.imageRemainingMs = null;
+    stopCurrentMedia();
     state.playlist = Array.isArray(items) ? items : [];
     state.currentIndex = 0;
+    state.playbackState = state.playlist.length === 0 ? 'idle' : previousState;
 
     log('info', 'Playlist applied', {
       itemCount: state.playlist.length,
@@ -730,6 +789,8 @@
     }
 
     if (state.playlist.length === 0) {
+      state.playbackState = 'idle';
+      stopCurrentMedia();
       setOverlay('online | waiting for playlist');
       return;
     }
@@ -787,6 +848,7 @@
             return;
           }
 
+          state.hasActiveMedia = false;
           log('warn', 'Image rendering failed, skipping item', {
             itemId: item.id,
             url: item.url,
@@ -797,6 +859,7 @@
 
         root.appendChild(image);
         state.currentImage = image;
+        state.hasActiveMedia = true;
         scheduleNextTransition(durationMs, token);
         return;
       }
@@ -826,6 +889,7 @@
           return;
         }
 
+        state.hasActiveMedia = false;
         log('warn', 'Video playback failed, skipping item', {
           itemId: item.id,
           url: item.url,
@@ -849,7 +913,9 @@
           error && error.message ? error.message : 'VIDEO_PLAYBACK_FAILED',
         );
       });
+      state.hasActiveMedia = true;
     } catch (error) {
+      state.hasActiveMedia = false;
       log('warn', 'Failed to render media item, skipping to next', {
         index: state.currentIndex,
         itemId: item.id,
@@ -870,18 +936,25 @@
     if (state.playbackState === 'paused') {
       state.playbackState = 'playing';
 
-      if (isCurrentImage() && state.imageRemainingMs !== null) {
+      if (state.hasActiveMedia && isCurrentImage() && state.imageRemainingMs !== null) {
         state.imageDeadlineMs = Date.now() + state.imageRemainingMs;
         scheduleNextTransition(state.imageRemainingMs, state.playToken);
         return;
       }
 
-      if (state.currentVideo) {
-        await state.currentVideo.play().catch(function ignoreVideoResume() {
-          return;
+      if (state.hasActiveMedia && state.currentVideo) {
+        await state.currentVideo.play().catch(function resumeVideo(error) {
+          state.hasActiveMedia = false;
+          log('warn', 'Video resume failed, restarting current item', {
+            message: error && error.message ? error.message : 'unknown',
+          });
         });
+        if (state.hasActiveMedia) {
+          return;
+        }
       }
 
+      await playCurrentItem(false, 0);
       return;
     }
 
@@ -915,6 +988,7 @@
     state.playToken += 1;
     state.imageDeadlineMs = null;
     state.imageRemainingMs = null;
+    state.hasActiveMedia = false;
     stopCurrentMedia();
   }
 
@@ -1077,6 +1151,14 @@
 
     try {
       var syncResult = await syncPlaylist();
+      if (state.degraded) {
+        state.degraded = false;
+        publishStatus('online', {
+          reason: 'recovered',
+          trigger: reason,
+        });
+      }
+
       var shouldReload = forceReload === true || syncResult.changed === true;
 
       if (shouldReload) {
@@ -1090,6 +1172,13 @@
       }
 
       return syncResult;
+    } catch (error) {
+      state.degraded = true;
+      publishStatus('degraded', {
+        reason: reason,
+        message: error && error.message ? error.message : 'unknown',
+      });
+      throw error;
     } finally {
       state.syncInFlight = false;
     }
@@ -1327,7 +1416,9 @@
             return;
           }
 
-          publishStatus('online', { subscribed: true });
+          publishStatus(state.degraded ? 'degraded' : 'online', {
+            subscribed: true,
+          });
         },
       );
     });
@@ -1367,7 +1458,7 @@
         return;
       }
 
-      publishStatus('online', { heartbeat: true });
+      publishStatus(state.degraded ? 'degraded' : 'online', { heartbeat: true });
     }, config.heartbeatIntervalMs);
   }
 

@@ -1,4 +1,8 @@
-import { writeFile } from 'node:fs/promises';
+import { createWriteStream } from 'node:fs';
+import { mkdir } from 'node:fs/promises';
+import { dirname } from 'node:path';
+import { Readable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
 import type { HttpClient } from '../../core/contracts/network';
 import { AppError } from '../../core/errors/app-error';
 
@@ -32,8 +36,18 @@ export class FetchHttpClient implements HttpClient {
       );
     }
 
-    const buffer = Buffer.from(await response.arrayBuffer());
-    await writeFile(destinationPath, buffer);
+    if (!response.body) {
+      throw new AppError(
+        'DOWNLOAD_FAILED',
+        `Download returned an empty body for ${url}`,
+      );
+    }
+
+    await mkdir(dirname(destinationPath), { recursive: true });
+    await pipeline(
+      Readable.fromWeb(response.body as never),
+      createWriteStream(destinationPath),
+    );
   }
 
   private async fetchWithTimeout(

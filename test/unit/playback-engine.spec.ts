@@ -123,4 +123,62 @@ describe('PlaybackEngine', () => {
 
     expect(renderer.calls).toContain('image:image://1');
   });
+
+  it('clears active media when a newly loaded playlist is empty', async () => {
+    const renderer = new FakeRenderer();
+    const engine = new PlaybackEngine(renderer, noopLogger, {
+      loop: true,
+      defaultImageDurationSec: 10,
+    });
+
+    await engine.loadPlaylist([
+      {
+        id: 'img-1',
+        type: 'image',
+        url: 'image://1',
+        duration: 1,
+      },
+    ]);
+
+    await engine.play();
+    expect(engine.getState()).toBe('playing');
+
+    await engine.loadPlaylist([]);
+
+    expect(engine.getState()).toBe('idle');
+    expect(
+      renderer.calls.filter((item) => item === 'stop').length,
+    ).toBeGreaterThanOrEqual(2);
+  });
+
+  it('starts the first item after playlist reload while paused', async () => {
+    const renderer = new FakeRenderer();
+    const engine = new PlaybackEngine(renderer, noopLogger, {
+      loop: true,
+      defaultImageDurationSec: 10,
+    });
+
+    await engine.loadPlaylist([
+      {
+        id: 'img-1',
+        type: 'image',
+        url: 'image://1',
+        duration: 3,
+      },
+    ]);
+    await engine.play();
+    await engine.pause();
+
+    await engine.loadPlaylist([
+      {
+        id: 'img-2',
+        type: 'image',
+        url: 'image://2',
+        duration: 3,
+      },
+    ]);
+    await engine.play();
+
+    expect(renderer.calls).toContain('image:image://2');
+  });
 });

@@ -23,6 +23,8 @@ interface MqttClientServiceOptions {
 export class MqttClientService {
   private running = false;
   private connected = false;
+  private currentStatus: StatusEvent['status'] = 'offline';
+  private currentStatusDetails?: Record<string, unknown>;
   private reconnectAttempt = 0;
   private reconnectTimer?: NodeJS.Timeout;
   private heartbeatTimer?: NodeJS.Timeout;
@@ -71,12 +73,7 @@ export class MqttClientService {
       this.heartbeatTimer = undefined;
     }
 
-    await this.safePublishStatus({
-      type: 'status',
-      status: 'offline',
-      deviceId: extractDeviceIdFromTopic(this.options.statusTopic),
-      ts: Date.now(),
-    });
+    await this.publishRuntimeStatus('offline');
 
     await this.transport.disconnect();
   }
@@ -97,6 +94,21 @@ export class MqttClientService {
     );
   }
 
+  async publishRuntimeStatus(
+    status: StatusEvent['status'],
+    details?: Record<string, unknown>,
+  ): Promise<void> {
+    this.currentStatus = status;
+    this.currentStatusDetails = details;
+    await this.safePublishStatus({
+      type: 'status',
+      status,
+      deviceId: extractDeviceIdFromTopic(this.options.statusTopic),
+      ts: Date.now(),
+      details,
+    });
+  }
+
   private async connectAndSubscribe(): Promise<void> {
     try {
       await this.transport.connect();
@@ -113,11 +125,17 @@ export class MqttClientService {
         this.inboundMessageHandler,
       );
 
+      if (this.currentStatus === 'offline') {
+        this.currentStatus = 'online';
+        this.currentStatusDetails = undefined;
+      }
+
       await this.safePublishStatus({
         type: 'status',
-        status: 'online',
+        status: this.currentStatus,
         deviceId: extractDeviceIdFromTopic(this.options.statusTopic),
         ts: Date.now(),
+        details: this.currentStatusDetails,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown';
@@ -164,10 +182,12 @@ export class MqttClientService {
 
       void this.safePublishStatus({
         type: 'status',
-        status: 'online',
+        status:
+          this.currentStatus === 'offline' ? 'online' : this.currentStatus,
         deviceId: extractDeviceIdFromTopic(this.options.statusTopic),
         ts: Date.now(),
         details: {
+          ...(this.currentStatusDetails ?? {}),
           heartbeat: true,
         },
       });

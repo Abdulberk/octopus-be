@@ -29,13 +29,31 @@ export class DomRenderer implements PlaybackRenderer {
     await this.stop();
 
     const image = document.createElement('img');
-    image.src = source;
     image.alt = 'Digital signage image content';
     image.style.width = '100%';
     image.style.height = '100%';
     image.style.objectFit = 'contain';
 
-    this.container.appendChild(image);
+    await new Promise<void>((resolve, reject) => {
+      const onLoad = (): void => {
+        cleanup();
+        resolve();
+      };
+      const onError = (): void => {
+        cleanup();
+        reject(new AppError('MEDIA_ERROR', `Image failed to load: ${source}`));
+      };
+      const cleanup = (): void => {
+        image.removeEventListener('load', onLoad);
+        image.removeEventListener('error', onError);
+      };
+
+      image.addEventListener('load', onLoad);
+      image.addEventListener('error', onError);
+      image.src = source;
+      this.container.appendChild(image);
+    });
+
     this.currentImage = image;
   }
 
@@ -51,11 +69,23 @@ export class DomRenderer implements PlaybackRenderer {
     video.controls = false;
     video.volume = this.currentVolume;
 
+    let playbackStarted = false;
+    let playbackCompleted = false;
+    const endedHandler = (): void => {
+      if (playbackCompleted) {
+        return;
+      }
+      playbackCompleted = true;
+      onEnded();
+    };
     const onError = (): void => {
-      throw new AppError('MEDIA_ERROR', `Video failed to load: ${source}`);
+      if (!playbackStarted || playbackCompleted) {
+        return;
+      }
+      playbackCompleted = true;
+      onEnded();
     };
 
-    const endedHandler = (): void => onEnded();
     this.cleanupEndedListener = () => {
       video.removeEventListener('ended', endedHandler);
       video.removeEventListener('error', onError);
@@ -66,10 +96,19 @@ export class DomRenderer implements PlaybackRenderer {
 
     this.container.appendChild(video);
     this.currentVideo = video;
-    await video.play().catch((error: unknown) => {
-      const message = error instanceof Error ? error.message : 'unknown';
-      throw new AppError('MEDIA_ERROR', `Video playback failed: ${message}`);
-    });
+
+    await video
+      .play()
+      .then(() => {
+        playbackStarted = true;
+      })
+      .catch((error: unknown) => {
+        const message =
+          error instanceof Error
+            ? error.message
+            : `Video failed to load: ${source}`;
+        throw new AppError('MEDIA_ERROR', `Video playback failed: ${message}`);
+      });
   }
 
   async pause(): Promise<void> {

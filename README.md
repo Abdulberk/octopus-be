@@ -255,8 +255,19 @@ pnpm tizen:build-web
 pnpm tizen:package
 ```
 
-Before packaging for emulator/device, update `public/player-config.js` with a host/IP that is reachable from the TV runtime.
-Do not leave `localhost` unless the broker and playlist API are running inside the same device/emulator environment.
+Before packaging for emulator/device, provide a reachable runtime host or full endpoints through environment variables instead of editing source files:
+```powershell
+$env:PLAYER_HOST="192.168.1.10"
+# or override endpoints directly
+$env:PLAYER_PLAYLIST_ENDPOINT="https://playlist.example.com/v1"
+$env:PLAYER_MQTT_URL="wss://mqtt.example.com/mqtt"
+```
+Optional staged overrides:
+- `PLAYER_DEVICE_ID`
+- `PLAYER_MQTT_USERNAME`
+- `PLAYER_MQTT_PASSWORD`
+
+Do not leave the player pointed at `localhost`/`127.0.0.1` unless the broker and playlist API are running inside the same device/emulator environment.
 
 Check emulator target:
 ```bash
